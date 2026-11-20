@@ -43,30 +43,16 @@ input[type=text]{font:inherit;padding:9px 12px;border:1px solid var(--line);bord
 .part{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
 .hide{display:none}
 kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:#fff}
+summary{cursor:pointer;list-style:none}summary::-webkit-details-marker{display:none}
+summary::before{content:'▸ ';color:var(--mute)}details[open]>summary::before{content:'▾ '}
+details.card{padding:10px 16px}
+.stats{grid-template-columns:repeat(auto-fit,minmax(95px,1fr));gap:6px}.stat{padding:4px 8px}.stat b{font-size:15px}
+#q{font-size:19px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Quizbowl Practice</h1>
-
-  <div class="card" id="settings">
-    <div class="row">
-      <div class="seg" id="mode"><button data-m="t" class="on">Tossups</button><button data-m="b">Bonuses</button></div>
-      <span class="small" id="pool"></span>
-    </div>
-    <div class="lbl">Years</div>
-    <div class="row">
-      <div class="dual"><div class="track"></div><div class="fill" id="fill"></div>
-        <input type="range" id="lo"><input type="range" id="hi"></div>
-      <div class="yrs" id="yrs"></div>
-    </div>
-    <div class="lbl">Difficulty</div>
-    <div class="row" id="diffs"></div>
-    <div class="lbl">Categories <button class="chip" id="allcats" style="margin-left:6px">all / none</button></div>
-    <div class="row" id="cats"></div>
-    <div class="lbl">Reading speed</div>
-    <div class="row"><input type="range" id="speed" min="40" max="600" step="10" style="flex:1"><span id="speedv" class="small" style="min-width:90px"></span></div>
-  </div>
 
   <div class="card">
     <div class="meta" id="meta">Press <b>Next</b> (or <kbd>N</kbd>) to start.</div>
@@ -85,11 +71,29 @@ kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;paddi
     <div id="result"></div>
   </div>
 
-  <div class="card">
-    <div class="row" style="justify-content:space-between"><b>Your stats</b><button id="reset" class="chip">Reset</button></div>
+  <details class="card" id="settings"><summary><b>Settings</b> <span class="small" id="sumtxt"></span></summary>
+    <div class="row">
+      <div class="seg" id="mode"><button data-m="t" class="on">Tossups</button><button data-m="b">Bonuses</button></div>
+      <span class="small" id="pool"></span>
+    </div>
+    <div class="lbl">Years</div>
+    <div class="row">
+      <div class="dual"><div class="track"></div><div class="fill" id="fill"></div>
+        <input type="range" id="lo"><input type="range" id="hi"></div>
+      <div class="yrs" id="yrs"></div>
+    </div>
+    <div class="lbl">Difficulty</div>
+    <div class="row" id="diffs"></div>
+    <div class="lbl">Categories <button class="chip" id="allcats" style="margin-left:6px">all / none</button></div>
+    <div class="row" id="cats"></div>
+    <div class="lbl">Reading speed</div>
+    <div class="row"><input type="range" id="speed" min="40" max="600" step="10" style="flex:1"><span id="speedv" class="small" style="min-width:90px"></span></div>
+  </details>
+  <details class="card" id="statbox"><summary><b>Stats</b> <span class="small" id="statline"></span></summary>
     <div class="stats" id="stats" style="margin-top:10px"></div>
-    <div id="catstats" class="small" style="margin-top:10px"></div>
-  </div>
+    <div id="catstats" class="small" style="margin-top:8px"></div>
+    <div style="margin-top:8px"><button id="reset" class="chip">Reset stats</button></div>
+  </details>
   <div class="small">Questions from the QBReader database (high school sets). Shortcuts: <kbd>space</kbd> buzz · <kbd>N</kbd> next · <kbd>P</kbd> pause</div>
 </div>
 
@@ -127,6 +131,7 @@ function save(){
   document.querySelectorAll('#mode button').forEach(b=>b.classList.toggle('on',b.dataset.m===S.mode));
   $('speedv').textContent=S.speed+' wpm';
   const k=S.mode==='t'?0:1;let n=0;for(const y of IDX.years)if(y>=S.lo&&y<=S.hi)n+=IDX.counts[y][k];
+  $('sumtxt').textContent=` — ${S.mode==='t'?'Tossups':'Bonuses'}, ${S.lo===S.hi?S.lo:S.lo+'–'+S.hi}, ${S.diffs.length} difficulties, ${S.cats.length===IDX.cats.length?'all categories':S.cats.length+' categories'}`;
   $('pool').textContent=`~${n.toLocaleString()} ${S.mode==='t'?'tossups':'bonuses'} in range (before filters)`;
 }
 async function load(y){const key=S.mode+y;if(!cache[key]){$('meta').textContent='Loading '+y+'…';cache[key]=await (await fetch(`data/${S.mode}${y}.json`)).json()}return cache[key]}
@@ -246,6 +251,7 @@ function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;
 function renderStats(){
   const pct=(a,b)=>b?Math.round(a/b*100)+'%':'—';
   $('stats').innerHTML=[['Tossups heard',ST.tu],['Correct',`${ST.tuR} (${pct(ST.tuR,ST.tu)})`],['Negs',ST.neg],['Avg buzz point',ST.tuR?Math.round(ST.bpSum/ST.tuR*100)+'% in':'—'],['Bonuses',ST.bo],['PPB',ST.bo?(ST.boPts/ST.bo).toFixed(1):'—']].map(([a,b])=>`<div class="stat"><span class="small">${a}</span><b>${b}</b></div>`).join('');
+  $('statline').textContent=` — ${ST.tuR}/${ST.tu} tossups (${pct(ST.tuR,ST.tu)})${ST.bo?', '+(ST.boPts/ST.bo).toFixed(1)+' PPB':''}`;
   $('catstats').innerHTML=Object.entries(ST.cat).sort((a,b)=>b[1][0]-a[1][0]).map(([c,[n,r]])=>`${c}: ${r}/${n} (${pct(r,n)})`).join(' · ');
 }
 $('next').onclick=next;$('buzz').onclick=buzz;$('submit').onclick=submit;$('reveal').onclick=reveal;
