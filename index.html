@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quizbowl Practice</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1f2328;--mute:#6b7078;--line:#e2e0da;--acc:#2d5bd7;--ok:#1f8a4c;--bad:#c4372f;--chip:#eef1fb}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.lbl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);margin:10px 0 6px}
+button{font:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 14px;cursor:pointer}
+button.pri{background:var(--acc);color:#fff;border-color:var(--acc)}
+button.big{padding:12px 26px;font-size:18px;font-weight:600}
+button:disabled{opacity:.45;cursor:default}
+.chip{border-radius:999px;padding:4px 12px;font-size:14px;background:#fff}
+.chip.on{background:var(--chip);border-color:var(--acc);color:var(--acc)}
+.seg button{border-radius:0;margin-left:-1px}.seg button:first-child{border-radius:8px 0 0 8px}.seg button:last-child{border-radius:0 8px 8px 0}
+.seg button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+/* dual range */
+.dual{position:relative;height:34px;flex:1;min-width:220px}
+.dual .track{position:absolute;top:15px;left:0;right:0;height:4px;background:var(--line);border-radius:2px}
+.dual .fill{position:absolute;top:15px;height:4px;background:var(--acc);border-radius:2px}
+.dual input{position:absolute;left:0;top:6px;width:100%;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none;height:22px}
+.dual input::-webkit-slider-thumb{pointer-events:auto;-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--acc);cursor:grab}
+.dual input::-moz-range-thumb{pointer-events:auto;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--acc);cursor:grab}
+.dual input::-webkit-slider-runnable-track{background:none}
+.yrs{font-weight:600;min-width:110px;text-align:center}
+#q{font-size:18px;min-height:120px;white-space:pre-wrap}
+.meta{font-size:13px;color:var(--mute);margin-bottom:8px}
+.ans{margin-top:12px;padding:10px 12px;border-radius:8px;background:#faf9f6;border:1px solid var(--line)}
+.ans u{text-decoration:underline}
+.res-ok{color:var(--ok);font-weight:700}.res-bad{color:var(--bad);font-weight:700}
+input[type=text]{font:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:8px;flex:1;min-width:200px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.stat{background:#faf9f6;border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.stat b{display:block;font-size:20px}
+.small{font-size:13px;color:var(--mute)}
+.part{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+.hide{display:none}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Quizbowl Practice</h1>
+
+  <div class="card" id="settings">
+    <div class="row">
+      <div class="seg" id="mode"><button data-m="t" class="on">Tossups</button><button data-m="b">Bonuses</button></div>
+      <span class="small" id="pool"></span>
+    </div>
+    <div class="lbl">Years</div>
+    <div class="row">
+      <div class="dual"><div class="track"></div><div class="fill" id="fill"></div>
+        <input type="range" id="lo"><input type="range" id="hi"></div>
+      <div class="yrs" id="yrs"></div>
+    </div>
+    <div class="lbl">Difficulty</div>
+    <div class="row" id="diffs"></div>
+    <div class="lbl">Categories <button class="chip" id="allcats" style="margin-left:6px">all / none</button></div>
+    <div class="row" id="cats"></div>
+    <div class="lbl">Reading speed</div>
+    <div class="row"><input type="range" id="speed" min="40" max="600" step="10" style="flex:1"><span id="speedv" class="small" style="min-width:90px"></span></div>
+  </div>
+
+  <div class="card">
+    <div class="meta" id="meta">Press <b>Next</b> (or <kbd>N</kbd>) to start.</div>
+    <div id="q"></div>
+    <div id="parts"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="pri big" id="buzz" disabled>Buzz <span class="small" style="color:#dfe6ff">(space)</span></button>
+      <button id="next" class="big">Next</button>
+      <button id="pause" disabled>Pause</button>
+      <button id="reveal" disabled>Show answer</button>
+    </div>
+    <div class="row hide" id="answerRow" style="margin-top:12px">
+      <input type="text" id="guess" placeholder="Type your answer, press Enter" autocomplete="off">
+      <button class="pri" id="submit">Submit</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><b>Your stats</b><button id="reset" class="chip">Reset</button></div>
+    <div class="stats" id="stats" style="margin-top:10px"></div>
+    <div id="catstats" class="small" style="margin-top:10px"></div>
+  </div>
+  <div class="small">Questions from the QBReader database (high school sets). Shortcuts: <kbd>space</kbd> buzz · <kbd>N</kbd> next · <kbd>P</kbd> pause</div>
+</div>
+
+<script>
+const DIFF={2:'Easy HS',3:'Regular HS',4:'Hard HS',5:'Nationals'};
+const store={get(k,d){try{const v=localStorage.getItem('qb_'+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem('qb_'+k,JSON.stringify(v))}catch(e){}}};
+const $=id=>document.getElementById(id);
+let IDX=null, cache={}, S=store.get('settings',{}), ST=store.get('stats',{tu:0,tuR:0,neg:0,bpSum:0,bo:0,boPts:0,cat:{}});
+let cur=null, timer=null, words=[], wi=0, paused=false, state='idle', partI=0, boScore=0;
+
+async function init(){
+  IDX=await (await fetch('data/index.json')).json();
+  const ys=IDX.years, lo=$('lo'), hi=$('hi');
+  for(const el of [lo,hi]){el.min=ys[0];el.max=ys[ys.length-1];el.step=1}
+  lo.value=S.lo??Math.max(ys[0],2012); hi.value=S.hi??ys[ys.length-1];
+  lo.oninput=hi.oninput=e=>{if(+lo.value>+hi.value){if(e.target===lo)lo.value=hi.value;else hi.value=lo.value}save()};
+  S.diffs=S.diffs||[2,3,4]; S.cats=S.cats||IDX.cats.map((_,i)=>i); S.mode=S.mode||'t'; S.speed=S.speed||220;
+  $('diffs').innerHTML=Object.entries(DIFF).map(([d,n])=>`<button class="chip" data-d="${d}">${n}</button>`).join('');
+  $('cats').innerHTML=IDX.cats.map((c,i)=>`<button class="chip" data-c="${i}">${c}</button>`).join('');
+  $('diffs').onclick=e=>{const d=+e.target.dataset.d;if(!d)return;S.diffs=tog(S.diffs,d);save()};
+  $('cats').onclick=e=>{const c=e.target.dataset.c;if(c===undefined)return;S.cats=tog(S.cats,+c);save()};
+  $('allcats').onclick=()=>{S.cats=S.cats.length?[]:IDX.cats.map((_,i)=>i);save()};
+  $('mode').onclick=e=>{if(!e.target.dataset.m)return;S.mode=e.target.dataset.m;save();stopRead();resetQ()};
+  $('speed').value=S.speed; $('speed').oninput=()=>{S.speed=+$('speed').value;save()};
+  save(); renderStats();
+}
+function tog(a,v){return a.includes(v)?a.filter(x=>x!==v):[...a,v]}
+function save(){
+  S.lo=+$('lo').value;S.hi=+$('hi').value;store.set('settings',S);
+  const min=+$('lo').min,max=+$('lo').max,w=max-min||1;
+  $('fill').style.left=((S.lo-min)/w*100)+'%';$('fill').style.width=((S.hi-S.lo)/w*100)+'%';
+  $('yrs').textContent=S.lo===S.hi?S.lo:`${S.lo} – ${S.hi}`;
+  document.querySelectorAll('#diffs .chip').forEach(b=>b.classList.toggle('on',S.diffs.includes(+b.dataset.d)));
+  document.querySelectorAll('#cats .chip').forEach(b=>b.classList.toggle('on',S.cats.includes(+b.dataset.c)));
+  document.querySelectorAll('#mode button').forEach(b=>b.classList.toggle('on',b.dataset.m===S.mode));
+  $('speedv').textContent=S.speed+' wpm';
+  const k=S.mode==='t'?0:1;let n=0;for(const y of IDX.years)if(y>=S.lo&&y<=S.hi)n+=IDX.counts[y][k];
+  $('pool').textContent=`~${n.toLocaleString()} ${S.mode==='t'?'tossups':'bonuses'} in range (before filters)`;
+}
+async function load(y){const key=S.mode+y;if(!cache[key]){$('meta').textContent='Loading '+y+'…';cache[key]=await (await fetch(`data/${S.mode}${y}.json`)).json()}return cache[key]}
+async function pick(){
+  const k=S.mode==='t'?0:1;let yrs=IDX.years.filter(y=>y>=S.lo&&y<=S.hi&&IDX.counts[y][k]);
+  if(!S.diffs.length||!S.cats.length)return null;
+  for(let tries=0;tries<12&&yrs.length;tries++){
+    let tot=yrs.reduce((s,y)=>s+IDX.counts[y][k],0),r=Math.random()*tot,y=yrs[0];
+    for(const yy of yrs){r-=IDX.counts[yy][k];if(r<=0){y=yy;break}}
+    const arr=(await load(y)).filter(q=>{const c=S.mode==='t'?q[2]:q[3],d=S.mode==='t'?q[5]:q[6];return S.cats.includes(c)&&S.diffs.includes(d)});
+    if(arr.length)return {y,q:arr[Math.floor(Math.random()*arr.length)]};
+    yrs=yrs.filter(v=>v!==y);
+  }
+  return null;
+}
+function resetQ(){$('q').textContent='';$('parts').innerHTML='';$('result').innerHTML='';$('answerRow').classList.add('hide');state='idle';btns()}
+function btns(){
+  $('buzz').disabled=!(state==='reading'||state==='done-reading'||state==='bonus');
+  $('pause').disabled=state!=='reading';$('pause').textContent=paused?'Resume':'Pause';
+  $('reveal').disabled=!(state==='reading'||state==='done-reading'||state==='buzzed'||state==='bonus');
+  $('buzz').firstChild.textContent=S.mode==='b'?'Answer ':'Buzz ';
+}
+async function next(){
+  stopRead();resetQ();$('meta').textContent='Finding a question…';
+  let p;try{p=await pick()}catch(e){$('meta').textContent='Could not load questions ('+e.message+').';return}
+  if(!p){$('meta').textContent='No questions match those filters.';return}
+  cur=p;const q=p.q;
+  if(S.mode==='t'){
+    $('meta').textContent=`${q[4]} · ${IDX.cats[q[2]]}${q[3]?' / '+q[3]:''} · ${DIFF[q[5]]}`;
+    words=q[0].split(' ');wi=0;paused=false;state='reading';btns();tick();
+  }else{
+    $('meta').textContent=`${q[5]} · ${IDX.cats[q[3]]}${q[4]?' / '+q[4]:''} · ${DIFF[q[6]]}`;
+    $('q').textContent=q[0];partI=0;boScore=0;showPart();
+  }
+}
+function tick(){
+  if(paused||state!=='reading')return;
+  if(wi>=words.length){state='done-reading';btns();timer=setTimeout(()=>{if(state==='done-reading')reveal(false,true)},5000);return}
+  wi++;$('q').textContent=words.slice(0,wi).join(' ');
+  const w=words[wi-1];let ms=60000/S.speed;if(/[.,;:!?]$/.test(w))ms*=1.6;
+  timer=setTimeout(tick,ms);
+}
+function stopRead(){clearTimeout(timer);timer=null}
+function buzz(){
+  if(S.mode==='b'){if(state==='bonus'){$('answerRow').classList.remove('hide');$('guess').value='';$('guess').focus()}return}
+  if(state!=='reading'&&state!=='done-reading')return;
+  stopRead();state='buzzed';cur.bp=wi;cur.early=wi<words.length;btns();
+  $('answerRow').classList.remove('hide');$('guess').value='';$('guess').focus();
+}
+function submit(){
+  const g=$('guess').value.trim();
+  if(S.mode==='b'){partResult(check(g,cur.q[2][partI]),g);return}
+  if(state!=='buzzed')return;
+  finishTossup(check(g,cur.q[1]),g);
+}
+function finishTossup(ok,g){
+  state='answered';btns();$('answerRow').classList.add('hide');
+  $('q').textContent=words.join(' ');
+  const cat=IDX.cats[cur.q[2]];const c=ST.cat[cat]=ST.cat[cat]||[0,0];
+  ST.tu++;c[0]++;cur.ok=ok;
+  if(ok){ST.tuR++;c[1]++;ST.bpSum+=cur.bp/words.length}else if(cur.early)ST.neg++;
+  store.set('stats',ST);renderStats();
+  $('result').innerHTML=`<div class="ans"><span class="${ok?'res-ok':'res-bad'}">${ok?'Correct':cur.early?'Incorrect (would be −5)':'Incorrect'}</span>${g?` — you said “${esc(g)}”`:''}<br>Answer: ${cur.q[1]}<br><span class="small">Buzzed at word ${cur.bp} of ${words.length}</span>
+  ${ok?'':'<div style="margin-top:8px"><button id="override">I was right</button></div>'}</div>`;
+  if(!ok)$('override').onclick=()=>{ST.tuR++;c[1]++;if(cur.early)ST.neg--;ST.bpSum+=cur.bp/words.length;store.set('stats',ST);renderStats();$('result').querySelector('.res-bad').outerHTML='<span class="res-ok">Correct (overridden)</span>';$('override').remove()};
+}
+function reveal(){
+  if(S.mode==='b'){if(state==='bonus')partResult(false,'');return}
+  stopRead();cur.bp=words.length;cur.early=false;
+  if(state==='reading'||state==='done-reading'){
+    state='answered';btns();$('q').textContent=words.join(' ');
+    $('result').innerHTML=`<div class="ans"><span class="res-bad">No buzz</span><br>Answer: ${cur.q[1]}</div>`;
+    const cat=IDX.cats[cur.q[2]];const c=ST.cat[cat]=ST.cat[cat]||[0,0];ST.tu++;c[0]++;store.set('stats',ST);renderStats();
+  }else if(state==='buzzed')finishTossup(false,$('guess').value.trim());
+}
+function showPart(){
+  const q=cur.q;state='bonus';btns();
+  const d=document.createElement('div');d.className='part';d.innerHTML=`<b>[10]</b> ${esc(q[1][partI])}<div class="pr"></div>`;
+  $('parts').appendChild(d);$('answerRow').classList.remove('hide');$('guess').value='';$('guess').focus();
+}
+function partResult(ok,g){
+  const q=cur.q,box=$('parts').lastChild.querySelector('.pr');
+  const render=ok=>`<div class="ans"><span class="${ok?'res-ok':'res-bad'}">${ok?'Correct':'Incorrect'}</span>${g?` — “${esc(g)}”`:''}<br>Answer: ${q[2][partI]}${ok?'':' <button class="ov">I was right</button>'}</div>`;
+  if(ok)boScore+=10;box.innerHTML=render(ok);
+  const ov=box.querySelector('.ov');if(ov)ov.onclick=()=>{boScore+=10;if(state==='answered'){ST.boPts+=10;store.set('stats',ST);renderStats();$('result').innerHTML=`<div class="ans"><b>Bonus total: ${boScore}</b></div>`}box.innerHTML=render(true)};
+  partI++;
+  if(partI<q[1].length)showPart();
+  else{state='answered';btns();$('answerRow').classList.add('hide');ST.bo++;ST.boPts+=boScore;store.set('stats',ST);renderStats();$('result').innerHTML=`<div class="ans"><b>Bonus total: ${boScore}</b></div>`}
+}
+/* answer checking */
+function norm(s){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/&[a-z]+;/g,' ').replace(/[^a-z0-9 ]/g,' ').replace(/\b(the|a|an|of)\b/g,' ').replace(/\s+/g,' ').trim()}
+function lev(a,b){const m=a.length,n=b.length;if(!m||!n)return Math.max(m,n);let p=Array.from({length:n+1},(_,i)=>i);for(let i=1;i<=m;i++){let c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+function sim(a,b){return 1-lev(a,b)/Math.max(a.length,b.length)}
+function options(html){
+  const strip=h=>h.replace(/<[^>]+>/g,'');
+  const main=html.split('[')[0];
+  const alts=[...html.matchAll(/\b(?:or|accept)\s+([^;\]\)]+)/gi)].map(m=>m[1]).filter(s=>!/^(equivalents?|answers? )/i.test(strip(s)));
+  const out=[];
+  for(const part of [main,...alts]){
+    const req=[...part.matchAll(/<(?:u|b)>(.*?)<\/(?:u|b)>/g)].map(m=>strip(m[1]));
+    if(req.length)out.push(norm(req.join(' ')));
+    const full=norm(strip(part));if(full)out.push(full);
+  }
+  return [...new Set(out.filter(Boolean))];
+}
+function check(g,html){
+  g=norm(g);if(!g)return false;
+  for(const o of options(html)){
+    if(g===o)return true;
+    if(o.length>=4&&g.length>=4&&(o.includes(g)&&g.length>=o.length*0.5||g.includes(o)))return true;
+    if(sim(g,o)>=0.8)return true;
+    const last=o.split(' ').pop();if(last.length>=4&&sim(g,last)>=0.85)return true;
+  }
+  return false;
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderStats(){
+  const pct=(a,b)=>b?Math.round(a/b*100)+'%':'—';
+  $('stats').innerHTML=[['Tossups heard',ST.tu],['Correct',`${ST.tuR} (${pct(ST.tuR,ST.tu)})`],['Negs',ST.neg],['Avg buzz point',ST.tuR?Math.round(ST.bpSum/ST.tuR*100)+'% in':'—'],['Bonuses',ST.bo],['PPB',ST.bo?(ST.boPts/ST.bo).toFixed(1):'—']].map(([a,b])=>`<div class="stat"><span class="small">${a}</span><b>${b}</b></div>`).join('');
+  $('catstats').innerHTML=Object.entries(ST.cat).sort((a,b)=>b[1][0]-a[1][0]).map(([c,[n,r]])=>`${c}: ${r}/${n} (${pct(r,n)})`).join(' · ');
+}
+$('next').onclick=next;$('buzz').onclick=buzz;$('submit').onclick=submit;$('reveal').onclick=reveal;
+$('pause').onclick=()=>{paused=!paused;btns();if(!paused)tick()};
+$('reset').onclick=()=>{ST={tu:0,tuR:0,neg:0,bpSum:0,bo:0,boPts:0,cat:{}};store.set('stats',ST);renderStats()};
+$('guess').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submit()}};
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'&&e.target.type==='text')return;
+  if(e.code==='Space'){e.preventDefault();buzz()}
+  else if(e.key==='n'||e.key==='N')next();
+  else if((e.key==='p'||e.key==='P')&&state==='reading'){paused=!paused;btns();if(!paused)tick()}
+});
+init().catch(e=>{$('meta').textContent='Could not load question index: '+e.message+' (open this through a web server / GitHub Pages, not as a local file).'});
+</script>
+</body>
+</html>
